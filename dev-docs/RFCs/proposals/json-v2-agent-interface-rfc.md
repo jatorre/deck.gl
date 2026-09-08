@@ -149,12 +149,18 @@ Programs and agents edit maps in turns. Specify how an incremental update applie
 convenience, deep merge by layer `id` (`mergeSpec(base, patch)`), which two downstream
 implementations already do independently.
 
-### 5. A data-source concept
+### 5. A data-source concept, GeoArrow first
 
 A `dataSources` block, declared separately from layers and referenced by id, with a registration
 API for adapters (URL, Arrow table, SQL, tiles, COG), as already proposed on #596. SQLRooms'
 dataset registry and CARTO's source functions are two working designs to reconcile. Credentials
 stay in the adapter, never in the document.
+
+The v10 tracker ([#10270](https://github.com/visgl/deck.gl/issues/10270)) names Arrow-first
+loaders, Apache Arrow output and GPU compute among the v10 goals. A v2 document should therefore
+treat GeoArrow as the canonical in-memory representation of a data source: adapters produce Arrow
+tables, layers bind columns by name, and other formats are conversions at the adapter boundary. This
+is what SQLRooms' `_sqlroomsBinding` already does for DuckDB and GeoArrow layers.
 
 ### 6. Registry profiles
 
@@ -218,6 +224,15 @@ than the current situation, where each vendor's subset is implicit.
 - Should `@deck.gl/json` accept Mapbox/MapLibre style-spec expression arrays as an accessor
   syntax alongside `@@=`? Many authors already know that grammar, but the module's documentation
   states it is not an implementation of alternate schemas, and "One API" argues against it.
+  There is a second, stronger reason to consider a declarative expression grammar: `@@=` strings
+  are JavaScript evaluated per row on the CPU, while luma.gl 9.4 ships `@luma.gl/gpgpu` (GPU data,
+  GPU tables, GPU-native H3 and A5 cell decoding) and v10 intends a generic compute runtime. An
+  expression grammar over GeoArrow columns could be compiled to GPU transforms, so that
+  data-driven styling, filtering and aggregation described in the document run where the data
+  lives. This is an opportunity to explore with the luma.gl GPGPU work rather than a v2
+  requirement.
+- v10 is a breaking release. If the `@@` prefixes, the expression syntax and the data model are to
+  change, they should change together, once, with the schema published alongside.
 - Should core define one color-scale helper vocabulary (bins, continuous, categories) so vendors
   and documents converge, or leave scales to profiles?
 - Keep the `@@` prefixes in v2, or move to plain `type` with a `$schema`? A schema makes either
